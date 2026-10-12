@@ -40,6 +40,12 @@ If you want webhooks during development, add `"webhook_url":"https://<your-tunne
 
 For production you need your own [Monerium](https://monerium.com) account and an MPT tenant: contact MPT through [mpt.hr](https://mpt.hr). You then swap in the production `MPT_SECRET_KEY`, `MPT_WEBHOOK_SECRET` and your Safe as `MPT_TARGET_ADDRESS`. Nothing else changes. A sandbox key never works against a production tenant, and the other way around.
 
+### See it with real Monerium
+
+The simulated sandbox skips the bank and the blockchain. To see the full path, there is a public MPT tenant on Monerium's sandbox (`opensaas-sandbox`): a test SEPA transfer is issued as EURe by Monerium and minted on Gnosis Chiado straight into the project's Safe. Its transactions are public: [`opensaas-sandbox-demo` Safe on Blockscout](https://gnosis-chiado.blockscout.com/address/0xAbC300d2D6c838c0bf5FC5DA80De2693e092ef8e).
+
+Your own production setup has the same shape: your Monerium account, your IBAN, your Safe.
+
 ### Set your plan prices
 
 MPT has no product catalog: a payment is just an amount. So for MPT, each `PAYMENTS_*_PLAN_ID` env var holds the plan's **price in EUR**:
