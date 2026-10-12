@@ -85,6 +85,10 @@ The e2e tests cover the same flow, plus a short payment that grants nothing. Wit
 E2E_PAYMENT_PROCESSOR=mpt npx playwright test tests/mptPaymentTests.spec.ts
 ```
 
+### Revenue in the admin dashboard
+
+The daily stats job reads total revenue from MPT's `GET /api/intents/stats`: the money received for paid intents, plus late payments, since those grant credits too. Underpaid money is not counted.
+
 ### Deploying
 
 When you deploy, set the production `MPT_SECRET_KEY`, `MPT_WEBHOOK_SECRET` and `MPT_TARGET_ADDRESS` on your server, and register your production webhook URL with MPT.

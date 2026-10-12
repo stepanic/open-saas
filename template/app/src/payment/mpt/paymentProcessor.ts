@@ -12,6 +12,7 @@ import { getMptPlanAmountEur } from "./checkoutUtils";
 import {
   createMptPaymentIntent,
   getMptIntentSettlement,
+  getMptIntentStats,
   getMptPaymentIntent,
 } from "./mptClient";
 import { getMptPurchaseEventId, grantMptPurchase } from "./purchase";
@@ -62,8 +63,16 @@ export const mptPaymentProcessor: PaymentProcessor = {
   fetchCustomerPortalUrl: async () => null,
   webhook: mptWebhook,
   webhookMiddlewareConfigFn: mptMiddlewareConfigFn,
-  // MPT does not expose a revenue listing yet.
-  fetchTotalRevenue: async () => 0,
+  fetchTotalRevenue: async () => {
+    const { paid, late } = await getMptIntentStats();
+    // Late payments are credited too (see `getMptIntentSettlement`), so they
+    // count as revenue. Underpaid money is not, since nothing was granted.
+    const totalRevenueCents =
+      paid.amount_received_cents + late.amount_received_cents;
+
+    // Revenue is in cents so we convert to euros
+    return totalRevenueCents / 100;
+  },
   // Lets the shared MPT demo account work without webhooks: a single webhook
   // endpoint can't reach every local dev server.
   confirmCheckoutSession: async ({

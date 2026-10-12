@@ -66,10 +66,27 @@ export function getMptPaymentIntent(sid: string): Promise<MptPaymentIntent> {
   });
 }
 
-async function mptRequest(
-  path: string,
-  init: RequestInit,
-): Promise<MptPaymentIntent> {
+interface MptIntentTotals {
+  count: number;
+  amount_cents: number;
+  amount_received_cents: number;
+}
+
+/** Totals per intent outcome, across all of the tenant's intents. */
+export interface MptIntentStats {
+  currency: string;
+  paid: MptIntentTotals;
+  late: MptIntentTotals;
+  underpaid: MptIntentTotals;
+  pending: MptIntentTotals;
+  expired: MptIntentTotals;
+}
+
+export function getMptIntentStats(): Promise<MptIntentStats> {
+  return mptRequest("/api/intents/stats", { method: "GET" });
+}
+
+async function mptRequest<T>(path: string, init: RequestInit): Promise<T> {
   const response = await fetch(new URL(path, env.MPT_API_URL), {
     ...init,
     headers: {
@@ -85,7 +102,7 @@ async function mptRequest(
     );
   }
 
-  return (await response.json()) as MptPaymentIntent;
+  return (await response.json()) as T;
 }
 
 export type MptIntentSettlement = "paid" | "late" | "pending" | "failed";
