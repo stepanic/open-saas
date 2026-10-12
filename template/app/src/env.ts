@@ -6,6 +6,7 @@ import { authEnvSchema } from "./auth/env";
 import { demoAiAppEnvSchema } from "./demo-ai-app/env";
 import { fileUploadEnvSchema } from "./file-upload/env";
 import { lemonSqueezyEnvSchema } from "./payment/lemonSqueezy/env";
+import { mptEnvSchema } from "./payment/mpt/env";
 import { polarEnvSchema } from "./payment/polar/env";
 import { stripeEnvSchema } from "./payment/stripe/env";
 
@@ -22,6 +23,7 @@ export const serverEnvValidationSchema = defineEnvValidationSchema(
     ...stripeEnvSchema.shape,
     ...lemonSqueezyEnvSchema.shape,
     ...polarEnvSchema.shape,
+    ...mptEnvSchema.shape,
     ...demoAiAppEnvSchema.shape,
     ...fileUploadEnvSchema.shape,
     ...plausibleEnvSchema.shape,
