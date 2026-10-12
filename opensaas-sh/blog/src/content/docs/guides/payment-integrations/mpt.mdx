@@ -13,30 +13,32 @@ First, make sure you've defined your payment processor in `src/payment/paymentPr
 A bank transfer is a one-time push payment, so MPT can't renew a subscription. Use it for plans with a `credits` effect (e.g. `Credits10`). Checking out a subscription plan (`Hobby`, `Pro`) throws an error.
 :::
 
-### Sandbox and Production
+### Get sandbox keys
 
-MPT runs on top of Monerium, which has two fully separate environments:
-- Sandbox (`api.monerium.dev`): test SEPA transfers, no real money.
-- Production (`api.monerium.app`).
+You don't need an account to start. One call gives you sandbox keys:
 
-On the MPT side, **your key decides the environment.** A sandbox key pays through Monerium's sandbox, a production key through production. There is no separate "sandbox mode" flag: to go live you swap the key, the webhook secret and the Safe address.
+```sh
+curl -s -X POST https://mpt.domovina.ai/api/sandbox/tenants \
+  -H 'content-type: application/json' \
+  -d '{"name":"My SaaS (dev)"}'
+```
 
-### Get your MPT credentials
-
-You need four values for your `.env.server` file:
+Copy the values from the response into your `.env.server` file:
 
 ```ini title=".env.server"
 MPT_API_URL=https://mpt.domovina.ai
-MPT_SECRET_KEY=sk_...
-MPT_WEBHOOK_SECRET=whsec_...
-MPT_TARGET_ADDRESS=0x...
+MPT_SECRET_KEY=<secret_key>
+MPT_WEBHOOK_SECRET=<webhook_secret>
+MPT_TARGET_ADDRESS=<demo_target_address>
 ```
 
-- `MPT_SECRET_KEY`: your tenant's secret key. Keep it on the server only.
-- `MPT_WEBHOOK_SECRET`: the secret MPT signs webhooks with.
-- `MPT_TARGET_ADDRESS`: the Safe that receives the EURe. It must be on your tenant's payout whitelist.
+The keys are shown only once. In the sandbox no real money moves: you simulate the payment with a button on the MPT checkout page.
 
-Contact MPT through [mpt.hr](https://mpt.hr) for a sandbox tenant, and tell them your webhook URL (see below).
+If you want webhooks during development, add `"webhook_url":"https://<your-tunnel>/payments-webhook"` to the call above. You don't need them, though (see [Webhooks](#webhooks)).
+
+### Production
+
+For production you need your own [Monerium](https://monerium.com) account and an MPT tenant: contact MPT through [mpt.hr](https://mpt.hr). You then swap in the production `MPT_SECRET_KEY`, `MPT_WEBHOOK_SECRET` and your Safe as `MPT_TARGET_ADDRESS`. Nothing else changes. A sandbox key never works against a production tenant, and the other way around.
 
 ### Set your plan prices
 
@@ -56,19 +58,19 @@ MPT sends events to your server's `/payments-webhook` endpoint and signs them wi
 | Event | What Open SaaS does |
 |---|---|
 | `intent.paid` | Adds the plan's credits to the user. |
-| `payment.late` | Same as `intent.paid`: the user paid in full after the payment window closed. |
+| `payment.late` | Same as `intent.paid` if the full amount arrived after the payment window closed; otherwise nothing. |
 | `payment.received` | Nothing yet. Monerium holds the funds and `intent.paid` follows, usually within seconds. |
 | `payment.rejected`, `payment.underpaid` | Logs a warning and grants nothing. |
 
-You don't need a webhook to start developing. After checkout, MPT sends the buyer back to `/checkout?status=success&session_id=<sid>`, and the page asks your server to confirm the payment with MPT directly (`confirmCheckoutSession`). The purchase is applied under the same event id the webhook would use, so it is never applied twice.
+You don't need a webhook to start developing. After checkout, MPT sends the buyer back to `/checkout?session_id=<sid>`, and the page asks your server to confirm the payment with MPT directly (`confirmCheckoutSession`). The purchase is applied under the same event id the webhook would use, so it is never applied twice.
 
 In production, register `https://<your-server-url>/payments-webhook` with MPT anyway: a buyer can close the tab before a bank transfer arrives, and only the webhook reaches your app then.
 
 ### Test a payment
 
 1. Start your app with `wasp start` and log in.
-2. Go to the pricing page and buy the credits plan. You are redirected to the MPT checkout page with a QR code.
-3. Make a test transfer in Monerium's sandbox to the IBAN and reference shown on the checkout page.
+2. Go to the pricing page and buy the credits plan. You are redirected to the MPT checkout page.
+3. Click the button that simulates a successful payment. Other buttons simulate a late, short or rejected payment.
 4. Back in your app, the checkout page waits for the payment and then shows it as successful. The user's credits go up.
 
 ### Deploying

@@ -103,12 +103,17 @@ export function getMptIntentSettlement(
   if (intent.status?.stage === "rejected") {
     return "failed";
   }
+  const isUnderpaid =
+    intent.amount_received_cents !== null &&
+    intent.amount_received_cents < intent.amount_cents;
   if (intent.state === "expired") {
     const isPaidInFull =
       intent.paid_at !== null &&
       intent.amount_received_cents !== null &&
-      intent.amount_received_cents >= intent.amount_cents;
+      !isUnderpaid;
     return isPaidInFull ? "late" : "failed";
   }
-  return "pending";
+  // MPT leaves an underpaid intent open for the merchant to decide; Open SaaS
+  // grants nothing for it.
+  return isUnderpaid ? "failed" : "pending";
 }

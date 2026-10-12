@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { CHECKOUT_SUCCESS_URL } from "../paths";
+import { getCheckoutConfirmationUrl } from "../paths";
 import {
   type ConfirmCheckoutSessionArgs,
   type CreateCheckoutSessionArgs,
@@ -46,7 +46,9 @@ export const mptPaymentProcessor: PaymentProcessor = {
       amountEur: getMptPlanAmountEur(paymentPlan),
       label: prettyPaymentPlanName(paymentPlan.id),
       metadata: { userId, paymentPlanId: paymentPlan.id },
-      returnUrl: `${CHECKOUT_SUCCESS_URL}&session_id=${sid}`,
+      // MPT appends `mpt_sid` and `mpt_status` to it. The status is a hint
+      // only, so the checkout page confirms the payment with the server.
+      returnUrl: getCheckoutConfirmationUrl(sid),
     });
 
     return {

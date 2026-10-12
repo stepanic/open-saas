@@ -16,10 +16,9 @@ export function CheckoutResultPage() {
   const navigate = useNavigate();
   const [urlSearchParams] = useSearchParams();
   const status = urlSearchParams.get("status");
+  const sessionId = urlSearchParams.get("session_id");
   const paymentConfirmation = useCheckoutSessionConfirmation(
-    status === CheckoutResult.Success
-      ? urlSearchParams.get("session_id")
-      : null,
+    status === CheckoutResult.Canceled ? null : sessionId,
   );
 
   const isAwaitingPayment = paymentConfirmation === "awaiting";
@@ -38,10 +37,11 @@ export function CheckoutResultPage() {
     };
   }, [navigate, isAwaitingPayment]);
 
-  if (
-    status === null ||
-    (status !== CheckoutResult.Success && status !== CheckoutResult.Canceled)
-  ) {
+  const isKnownStatus =
+    status === CheckoutResult.Success || status === CheckoutResult.Canceled;
+  // A processor that confirms payments itself may return with a `session_id`
+  // and no `status`.
+  if (!isKnownStatus && (status !== null || sessionId === null)) {
     return <Link to={routes.AccountRoute.to} />;
   }
 
@@ -54,10 +54,15 @@ export function CheckoutResultPage() {
           {paymentConfirmation === "timedOut" &&
             "⏳ Your payment hasn't arrived yet."}
           {paymentConfirmation === "done" &&
-            status === CheckoutResult.Success &&
+            status !== CheckoutResult.Canceled &&
             "🥳 Payment Successful!"}
           {status === CheckoutResult.Canceled && "😢 Payment Canceled."}
         </h1>
+        {isAwaitingPayment && (
+          <Link to={routes.AccountRoute.to} className="underline">
+            Back to your account
+          </Link>
+        )}
         {!isAwaitingPayment && (
           <span className="">
             You will be redirected to your account page in{" "}
