@@ -17,6 +17,15 @@ export interface FetchCustomerPortalUrlArgs {
   prismaUserDelegate: PrismaClient["user"];
 }
 
+export interface ConfirmCheckoutSessionArgs {
+  sessionId: string;
+  userId: User["id"];
+  prismaUserDelegate: PrismaClient["user"];
+  processedWebhookEventDelegate: PrismaClient["processedWebhookEvent"];
+}
+
+export type CheckoutSessionStatus = "paid" | "pending" | "failed";
+
 export interface PaymentProcessor {
   id: "stripe" | "lemonsqueezy" | "polar" | "mpt";
   createCheckoutSession: (
@@ -28,6 +37,14 @@ export interface PaymentProcessor {
   webhook: PaymentsWebhook;
   webhookMiddlewareConfigFn: MiddlewareConfigFn;
   fetchTotalRevenue: () => Promise<number>;
+  /**
+   * Optional. Asks the payment processor directly whether a checkout was paid
+   * and applies the purchase if so. For setups where webhooks can't reach the
+   * app, e.g. a shared demo account used from many local dev servers.
+   */
+  confirmCheckoutSession?: (
+    args: ConfirmCheckoutSessionArgs,
+  ) => Promise<CheckoutSessionStatus>;
 }
 
 /**

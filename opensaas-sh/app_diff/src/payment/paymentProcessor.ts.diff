@@ -9,7 +9,7 @@
  import type { PaymentPlan } from "./plans";
  import { stripePaymentProcessor } from "./stripe/paymentProcessor";
  
-@@ -25,16 +25,9 @@
+@@ -34,7 +34,7 @@
    fetchCustomerPortalUrl: (
      args: FetchCustomerPortalUrlArgs,
    ) => Promise<string | null>;
@@ -17,6 +17,9 @@
 +  webhook: StripeWebhook;
    webhookMiddlewareConfigFn: MiddlewareConfigFn;
    fetchTotalRevenue: () => Promise<number>;
+   /**
+@@ -47,11 +47,4 @@
+   ) => Promise<CheckoutSessionStatus>;
  }
  
 -/**

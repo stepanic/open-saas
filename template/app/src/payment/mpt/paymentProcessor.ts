@@ -1,11 +1,20 @@
+import { randomBytes } from "node:crypto";
+import { CHECKOUT_SUCCESS_URL } from "../paths";
 import {
+  type ConfirmCheckoutSessionArgs,
   type CreateCheckoutSessionArgs,
   type PaymentProcessor,
 } from "../paymentProcessor";
 import { prettyPaymentPlanName } from "../plans";
+import { processWebhookEventOnce } from "../processedWebhookEvent";
 import { updateUserPaymentProcessorUserId } from "../user";
 import { getMptPlanAmountEur } from "./checkoutUtils";
-import { createMptPaymentIntent } from "./mptClient";
+import {
+  createMptPaymentIntent,
+  getMptIntentSettlement,
+  getMptPaymentIntent,
+} from "./mptClient";
+import { getMptPurchaseEventId, grantMptPurchase } from "./purchase";
 import { mptMiddlewareConfigFn, mptWebhook } from "./webhook";
 
 export const mptPaymentProcessor: PaymentProcessor = {
@@ -30,10 +39,14 @@ export const mptPaymentProcessor: PaymentProcessor = {
       prismaUserDelegate,
     );
 
+    // We pick the session id ourselves so the return URL can carry it.
+    const sid = randomBytes(12).toString("base64url");
     const intent = await createMptPaymentIntent({
+      sid,
       amountEur: getMptPlanAmountEur(paymentPlan),
       label: prettyPaymentPlanName(paymentPlan.id),
       metadata: { userId, paymentPlanId: paymentPlan.id },
+      returnUrl: `${CHECKOUT_SUCCESS_URL}&session_id=${sid}`,
     });
 
     return {
@@ -49,4 +62,40 @@ export const mptPaymentProcessor: PaymentProcessor = {
   webhookMiddlewareConfigFn: mptMiddlewareConfigFn,
   // MPT does not expose a revenue listing yet.
   fetchTotalRevenue: async () => 0,
+  // Lets the shared MPT demo account work without webhooks: a single webhook
+  // endpoint can't reach every local dev server.
+  confirmCheckoutSession: async ({
+    sessionId,
+    userId,
+    prismaUserDelegate,
+    processedWebhookEventDelegate,
+  }: ConfirmCheckoutSessionArgs) => {
+    const intent = await getMptPaymentIntent(sessionId);
+    if (intent.metadata?.userId !== userId) {
+      throw new Error(`MPT intent ${sessionId} belongs to another user`);
+    }
+
+    const settlement = getMptIntentSettlement(intent);
+    if (settlement === "pending" || settlement === "failed") {
+      return settlement;
+    }
+
+    await processWebhookEventOnce(
+      {
+        paymentProcessorEventId: getMptPurchaseEventId(sessionId, settlement),
+        eventType: settlement === "paid" ? "intent.paid" : "payment.late",
+      },
+      processedWebhookEventDelegate,
+      () =>
+        grantMptPurchase(
+          {
+            sid: intent.sid,
+            metadata: intent.metadata,
+            paidAt: intent.paid_at ? new Date(intent.paid_at) : new Date(),
+          },
+          prismaUserDelegate,
+        ),
+    );
+    return "paid";
+  },
 };

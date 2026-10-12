@@ -3,9 +3,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { env, type MiddlewareConfigFn, type PrismaClient } from "wasp/server";
 import type { PaymentsWebhook } from "wasp/server/api";
 import { UnhandledWebhookEventError } from "../errors";
-import { parsePaymentPlanId, paymentPlans } from "../plans";
 import { processWebhookEventOnce } from "../processedWebhookEvent";
-import { updateUserCredits } from "../user";
+import type { MptIntentMetadata } from "./mptClient";
+import { grantMptPurchase } from "./purchase";
 
 /**
  * The subset of MPT webhook payloads Open SaaS reads. MPT signs every event
@@ -17,7 +17,9 @@ interface MptWebhookEvent {
   event_id: string;
   occurred_at: string;
   sid: string | null;
-  metadata?: { userId?: string; paymentPlanId?: string } | null;
+  amount_cents?: number;
+  amount_received_cents?: number | null;
+  metadata?: MptIntentMetadata | null;
 }
 
 const WEBHOOK_TOLERANCE_SECONDS = 5 * 60;
@@ -139,11 +141,23 @@ async function handleMptEvent(
   userDelegate: PrismaClient["user"],
 ): Promise<void> {
   switch (event.type) {
-    // `payment.late` is a payment that settled after its intent expired. The
-    // user still paid in full, so they still get what they paid for.
     case "intent.paid":
+      await grantMptPurchase(
+        { ...event, paidAt: new Date(event.occurred_at) },
+        userDelegate,
+      );
+      break;
+    // `payment.late` is money that arrived after the intent expired, in any
+    // amount. Only a full payment buys the plan.
     case "payment.late":
-      await handleIntentPaid(event, userDelegate);
+      if (isPaidInFull(event)) {
+        await grantMptPurchase(
+          { ...event, paidAt: new Date(event.occurred_at) },
+          userDelegate,
+        );
+      } else {
+        console.warn("MPT late payment is short, not granted: ", event);
+      }
       break;
     // Monerium holds the SEPA funds, EURe is not minted yet. `intent.paid`
     // follows, usually within seconds.
@@ -160,29 +174,13 @@ async function handleMptEvent(
   }
 }
 
-async function handleIntentPaid(
-  event: MptWebhookEvent,
-  userDelegate: PrismaClient["user"],
-): Promise<void> {
-  const userId = event.metadata?.userId;
-  if (!userId || !event.metadata?.paymentPlanId) {
-    throw new Error(`MPT intent ${event.sid} has no Open SaaS metadata`);
-  }
-  const paymentPlanId = parsePaymentPlanId(event.metadata.paymentPlanId);
-  const paymentPlan = paymentPlans[paymentPlanId];
-
-  if (paymentPlan.effect.kind !== "credits") {
-    throw new Error(
-      `MPT intent ${event.sid} paid for a subscription plan, which MPT does not support`,
-    );
-  }
-
-  await updateUserCredits(
-    {
-      paymentProcessorUserId: userId,
-      numOfCreditsPurchased: paymentPlan.effect.amount,
-      datePaid: new Date(event.occurred_at),
-    },
-    userDelegate,
+function isPaidInFull({
+  amount_cents,
+  amount_received_cents,
+}: MptWebhookEvent): boolean {
+  return (
+    amount_cents !== undefined &&
+    amount_received_cents != null &&
+    amount_received_cents >= amount_cents
   );
 }

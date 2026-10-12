@@ -60,16 +60,16 @@ MPT sends events to your server's `/payments-webhook` endpoint and signs them wi
 | `payment.received` | Nothing yet. Monerium holds the funds and `intent.paid` follows, usually within seconds. |
 | `payment.rejected`, `payment.underpaid` | Logs a warning and grants nothing. |
 
-During development MPT has to reach your local server. Expose port `3001` with a tunnel such as [ngrok](https://ngrok.com/) and register `https://<your-tunnel>/payments-webhook` as your webhook URL with MPT.
+You don't need a webhook to start developing. After checkout, MPT sends the buyer back to `/checkout?status=success&session_id=<sid>`, and the page asks your server to confirm the payment with MPT directly (`confirmCheckoutSession`). The purchase is applied under the same event id the webhook would use, so it is never applied twice.
 
-In production, register `https://<your-server-url>/payments-webhook`.
+In production, register `https://<your-server-url>/payments-webhook` with MPT anyway: a buyer can close the tab before a bank transfer arrives, and only the webhook reaches your app then.
 
 ### Test a payment
 
 1. Start your app with `wasp start` and log in.
 2. Go to the pricing page and buy the credits plan. You are redirected to the MPT checkout page with a QR code.
 3. Make a test transfer in Monerium's sandbox to the IBAN and reference shown on the checkout page.
-4. Watch your server logs: once `intent.paid` arrives, the user's credits go up.
+4. Back in your app, the checkout page waits for the payment and then shows it as successful. The user's credits go up.
 
 ### Deploying
 
