@@ -2,15 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { confirmCheckoutSession } from "wasp/client/operations";
 import { Link, routes } from "wasp/client/router";
+import { CheckoutResult } from "./checkoutResult";
 
 const ACCOUNT_PAGE_REDIRECT_DELAY_MS = 4000;
 const CONFIRMATION_POLL_INTERVAL_MS = 3000;
 const CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000;
-
-export enum CheckoutResult {
-  Success = "success",
-  Canceled = "canceled",
-}
 
 export function CheckoutResultPage() {
   const navigate = useNavigate();
