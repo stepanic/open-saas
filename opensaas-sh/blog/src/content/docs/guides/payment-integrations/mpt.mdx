@@ -79,6 +79,12 @@ In production, register `https://<your-server-url>/payments-webhook` with MPT an
 3. Click the button that simulates a successful payment. Other buttons simulate a late, short or rejected payment.
 4. Back in your app, the checkout page waits for the payment and then shows it as successful. The user's credits go up.
 
+The e2e tests cover the same flow, plus a short payment that grants nothing. With the app running, run them from `e2e-tests`:
+
+```sh
+E2E_PAYMENT_PROCESSOR=mpt npx playwright test tests/mptPaymentTests.spec.ts
+```
+
 ### Deploying
 
 When you deploy, set the production `MPT_SECRET_KEY`, `MPT_WEBHOOK_SECRET` and `MPT_TARGET_ADDRESS` on your server, and register your production webhook URL with MPT.
