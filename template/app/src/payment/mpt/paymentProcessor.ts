@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { HttpError } from "wasp/server";
 import { getCheckoutConfirmationUrl } from "../paths";
 import {
   type ConfirmCheckoutSessionArgs,
@@ -27,9 +28,11 @@ export const mptPaymentProcessor: PaymentProcessor = {
   }: CreateCheckoutSessionArgs) => {
     // A SEPA transfer is a one-time push payment, so MPT cannot renew a
     // subscription on its own.
+    // A 400 shows the message on the pricing page instead of a generic 500.
     if (paymentPlan.effect.kind !== "credits") {
-      throw new Error(
-        `MPT supports one-time payment plans only, "${paymentPlan.id}" is a subscription`,
+      throw new HttpError(
+        400,
+        `${prettyPaymentPlanName(paymentPlan.id)} is a subscription, and bank transfers can't renew on their own. Choose a credits plan instead.`,
       );
     }
 
