@@ -1,0 +1,90 @@
+# Coolify "Docker Compose" resource. Domains (set in Coolify, not here):
+#   client → https://opensaas.mpt.hr      (port 80)
+#   server → https://opensaas-api.mpt.hr  (port 3001)
+# Secrets come from Coolify's environment variables; see `.env.example`.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: opensaas
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      POSTGRES_DB: opensaas
+    volumes:
+      - opensaas-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opensaas -d opensaas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: ../..
+      dockerfile: deploy/coolify/Dockerfile
+      target: server
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://opensaas:${SERVICE_PASSWORD_POSTGRES}@db:5432/opensaas
+      PORT: "3001"
+      WASP_WEB_CLIENT_URL: https://opensaas.mpt.hr
+      WASP_SERVER_URL: https://opensaas-api.mpt.hr
+      JWT_SECRET: ${SERVICE_PASSWORD_64_JWT}
+      MPT_API_URL: ${MPT_API_URL:-https://mpt.domovina.ai}
+      MPT_SECRET_KEY: ${MPT_SECRET_KEY}
+      MPT_WEBHOOK_SECRET: ${MPT_WEBHOOK_SECRET}
+      MPT_TARGET_ADDRESS: ${MPT_TARGET_ADDRESS}
+      PAYMENTS_HOBBY_SUBSCRIPTION_PLAN_ID: ${PAYMENTS_HOBBY_SUBSCRIPTION_PLAN_ID:-9.99}
+      PAYMENTS_PRO_SUBSCRIPTION_PLAN_ID: ${PAYMENTS_PRO_SUBSCRIPTION_PLAN_ID:-19.99}
+      PAYMENTS_CREDITS_10_PLAN_ID: ${PAYMENTS_CREDITS_10_PLAN_ID:-1.00}
+      SMTP_HOST: ${SMTP_HOST:-smtp.resend.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-resend}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      # The template validates every provider's env vars; only MPT is used here.
+      STRIPE_API_KEY: unused
+      STRIPE_WEBHOOK_SECRET: unused
+      LEMONSQUEEZY_API_KEY: unused
+      LEMONSQUEEZY_STORE_ID: unused
+      LEMONSQUEEZY_WEBHOOK_SECRET: unused
+      POLAR_ORGANIZATION_ACCESS_TOKEN: unused
+      POLAR_WEBHOOK_SECRET: unused
+      POLAR_SANDBOX_MODE: "true"
+      PADDLE_API_KEY: unused
+      PADDLE_WEBHOOK_SECRET: unused
+      PADDLE_SANDBOX_MODE: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-unused}
+      AWS_S3_REGION: unused
+      AWS_S3_IAM_ACCESS_KEY: unused
+      AWS_S3_IAM_SECRET_KEY: unused
+      AWS_S3_FILES_BUCKET: unused
+      PLAUSIBLE_API_KEY: unused
+      PLAUSIBLE_SITE_ID: unused
+      PLAUSIBLE_BASE_URL: https://plausible.io/api
+      GOOGLE_ANALYTICS_CLIENT_EMAIL: unused
+      GOOGLE_ANALYTICS_PRIVATE_KEY: unused
+      GOOGLE_ANALYTICS_PROPERTY_ID: unused
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/auth/me >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  client:
+    build:
+      context: ../..
+      dockerfile: deploy/coolify/Dockerfile
+      target: client
+      args:
+        REACT_APP_API_URL: https://opensaas-api.mpt.hr
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  opensaas-db:

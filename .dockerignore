@@ -1,0 +1,7 @@
+**/node_modules
+**/.wasp
+**/.env.server
+**/.env.client
+opensaas-sh
+template/e2e-tests
+template/blog

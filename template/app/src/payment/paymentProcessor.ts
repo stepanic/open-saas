@@ -3,7 +3,7 @@ import { User } from "wasp/entities";
 import type { MiddlewareConfigFn } from "wasp/server";
 import type { PaymentsWebhook } from "wasp/server/api";
 import type { PaymentPlan } from "./plans";
-import { stripePaymentProcessor } from "./stripe/paymentProcessor";
+import { mptPaymentProcessor } from "./mpt/paymentProcessor";
 
 export interface CreateCheckoutSessionArgs {
   userId: User["id"];
@@ -68,8 +68,8 @@ export interface PaymentProcessor {
  *
  * Make sure to choose the same payment processor in `src/payment/paymentProcessorClient.ts`.
  */
-export const paymentProcessor: PaymentProcessor = stripePaymentProcessor;
+// export const paymentProcessor: PaymentProcessor = stripePaymentProcessor;
 // export const paymentProcessor: PaymentProcessor = lemonSqueezyPaymentProcessor;
 // export const paymentProcessor: PaymentProcessor = polarPaymentProcessor;
 // export const paymentProcessor: PaymentProcessor = paddlePaymentProcessor;
-// export const paymentProcessor: PaymentProcessor = mptPaymentProcessor;
+export const paymentProcessor: PaymentProcessor = mptPaymentProcessor;

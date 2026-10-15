@@ -1,5 +1,5 @@
 import type { CheckoutSession, PaymentProcessorId } from "./paymentProcessor";
-import { stripePaymentProcessorClient } from "./stripe/paymentProcessorClient";
+import { mptPaymentProcessorClient } from "./mpt/paymentProcessorClient";
 
 /**
  * The client-side part of a payment processor, which opens the checkout
@@ -13,9 +13,8 @@ export interface PaymentProcessorClient {
 /**
  * Choose the same payment processor as in `src/payment/paymentProcessor.ts`.
  */
-export const paymentProcessorClient: PaymentProcessorClient =
-  stripePaymentProcessorClient;
+// export const paymentProcessorClient: PaymentProcessorClient = stripePaymentProcessorClient;
 // export const paymentProcessorClient: PaymentProcessorClient = lemonSqueezyPaymentProcessorClient;
 // export const paymentProcessorClient: PaymentProcessorClient = polarPaymentProcessorClient;
 // export const paymentProcessorClient: PaymentProcessorClient = paddlePaymentProcessorClient;
-// export const paymentProcessorClient: PaymentProcessorClient = mptPaymentProcessorClient;
+export const paymentProcessorClient: PaymentProcessorClient = mptPaymentProcessorClient;
